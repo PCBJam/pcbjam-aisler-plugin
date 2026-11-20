@@ -1,0 +1,131 @@
+{
+  "board": {
+    "widthMm": 55.0,
+    "heightMm": 42.0,
+    "bboxOriginMm": {
+      "x": 110.0,
+      "y": 60.0
+    },
+    "auxOriginMm": {
+      "x": 0.0,
+      "y": 0.0
+    },
+    "copperLayers": 2,
+    "thicknessMm": 1.6
+  },
+  "footprints": [
+    {
+      "excludeFromPos": false,
+      "excludeFromBom": false,
+      "dnp": false,
+      "smd": true,
+      "side": "top",
+      "rotationDeg": 0.0,
+      "ref": "R1",
+      "fpid": "Resistor_SMD:R_0805_2012Metric",
+      "posMm": {
+        "x": 118.0,
+        "y": 76.61
+      },
+      "fields": {
+        "Reference": "R1",
+        "Value": "10k",
+        "MPN": "RC0805FR-0710KL"
+      }
+    },
+    {
+      "excludeFromPos": false,
+      "excludeFromBom": false,
+      "dnp": false,
+      "smd": true,
+      "side": "bottom",
+      "rotationDeg": -90.0,
+      "ref": "C2",
+      "fpid": "Capacitor_SMD:C_0805_2012Metric",
+      "posMm": {
+        "x": 161.5,
+        "y": 0.0
+      },
+      "fields": {
+        "Reference": "C2",
+        "Value": "100\u00b5F",
+        "MPN": "second",
+        "mpn": "first"
+      }
+    },
+    {
+      "excludeFromPos": false,
+      "excludeFromBom": false,
+      "dnp": false,
+      "smd": false,
+      "side": "top",
+      "rotationDeg": 90.0,
+      "ref": "J1",
+      "fpid": "Connector_PinHeader_2.54mm:PinHeader_1x08_P2.54mm_Vertical",
+      "posMm": {
+        "x": 138.0,
+        "y": 69.5
+      },
+      "fields": {
+        "Reference": "J1",
+        "Value": "Conn \"A\"\\B"
+      }
+    },
+    {
+      "excludeFromPos": false,
+      "excludeFromBom": true,
+      "dnp": false,
+      "smd": false,
+      "side": "top",
+      "rotationDeg": 0.0,
+      "ref": "H1",
+      "fpid": "MountingHole:MountingHole_3.2mm_M3",
+      "posMm": {
+        "x": 112.0,
+        "y": 62.0
+      },
+      "fields": {
+        "Reference": "H1",
+        "Value": "MountingHole"
+      }
+    },
+    {
+      "excludeFromPos": false,
+      "excludeFromBom": false,
+      "dnp": true,
+      "smd": true,
+      "side": "top",
+      "rotationDeg": 45.5,
+      "ref": "U3",
+      "fpid": "Package_QFP:TQFP-32_7x7mm_P0.8mm",
+      "posMm": {
+        "x": 1e-05,
+        "y": -33.333333
+      },
+      "fields": {
+        "Reference": "U3",
+        "Value": "ATmega328P",
+        "AISLER_MPN": "ATMEGA328P-AU",
+        "Datasheet": "https://example.com/a.pdf"
+      }
+    },
+    {
+      "excludeFromPos": false,
+      "excludeFromBom": false,
+      "dnp": false,
+      "smd": true,
+      "side": "top",
+      "rotationDeg": 180.0,
+      "ref": "G1",
+      "fpid": "LOGO",
+      "posMm": {
+        "x": 150.123456,
+        "y": 100.0
+      },
+      "fields": {
+        "Reference": "G1",
+        "Mpn": "\u26a1 5V \ud83d\ude00"
+      }
+    }
+  ]
+}

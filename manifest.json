@@ -1,0 +1,21 @@
+{
+  "apiVersion": 1,
+  "id": "aisler",
+  "name": "AISLER Export",
+  "version": "0.1.0",
+  "description": "Push the open board to AISLER for a quote, or download an AISLER-ready ZIP: Gerbers, drill files, an IPC-356 netlist and the component list, made the way AISLER's own KiCad plugin makes them.",
+  "main": "main.js",
+  "ui": "ui.html",
+  "uiSize": { "width": 420, "height": 600 },
+  "surfaces": ["editor:pcbnew"],
+  "permissions": ["ui:custom", "ui:project-data", "project:export", "files:save", "network:aisler", "ui:open-external"],
+  "endpoints": {
+    "aisler": {
+      "origin": "https://aisler.net",
+      "paths": ["/p/new.json", "/api/import", "/api/import/{job}"],
+      "methods": ["GET", "POST"],
+      "auth": "none",
+      "upload": { "paths": ["/api/import"], "query": ["p", "s"], "field": "upload[file]", "maxBytes": 16777216 }
+    }
+  }
+}
