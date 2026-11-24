@@ -187,6 +187,11 @@ describe('the push', () => {
     const good = `${ORIGIN}/api/import?p=${TOKEN}&s=${SIGNATURE}`;
     expect(uploadQueryFrom({ upload_url: good }, ORIGIN)).toEqual({ p: TOKEN, s: SIGNATURE });
     expect(uploadQueryFrom({ upload_url: `${ORIGIN}/api/import?s=b_-&p=a` }, ORIGIN)).toEqual({ p: 'a', s: 'b_-' });
+    // About one token in three ends in base64 padding, which AISLER writes as %3D; PCBJam takes it as "=".
+    const padded = TOKEN.slice(0, 163);
+    expect(uploadQueryFrom({ upload_url: `${ORIGIN}/api/import?p=${padded}%3D&s=${SIGNATURE}` }, ORIGIN)).toEqual({ p: padded + '=', s: SIGNATURE });
+    expect(uploadQueryFrom({ upload_url: `${ORIGIN}/api/import?p=ab%3D%3D&s=b` }, ORIGIN)).toEqual({ p: 'ab==', s: 'b' });
+    expect(uploadQueryFrom({ upload_url: `${ORIGIN}/api/import?p=ab%3d=&s=b` }, ORIGIN)).toEqual({ p: 'ab==', s: 'b' });
     for (const upload_url of [
       undefined, null, 42, '',
       `https://evil.example/api/import?p=a&s=b`,
@@ -204,6 +209,11 @@ describe('the push', () => {
       `${ORIGIN}/api/import?p=a&p=c&s=b`,
       `${ORIGIN}/api/import?p=a&s=b&`,
       `${ORIGIN}/api/import?p=a%26&s=b`,
+      `${ORIGIN}/api/import?p=%3D&s=b`,
+      `${ORIGIN}/api/import?p=a%3D%3D%3D&s=b`,
+      `${ORIGIN}/api/import?p=a%3Db&s=b`,
+      `${ORIGIN}/api/import?p=a=b&s=b`,
+      `${ORIGIN}/api/import?p=a%3&s=b`,
       `${ORIGIN}/api/import?p=a b&s=b`,
       `${ORIGIN}/api/import?p=&s=b`,
       `${ORIGIN}/api/import?p=${'a'.repeat(513)}&s=b`,
@@ -277,11 +287,11 @@ describe('against the mock AISLER, through a host that sends like PCBJam', () =>
       expect(endpoint).toBe('aisler');
       expect(request.path).toBe('/api/import');
       expect(Object.keys(request.query).sort()).toEqual(['p', 's']);
-      for (const value of Object.values(request.query)) expect(value).toMatch(/^[A-Za-z0-9_-]{1,512}$/);
+      for (const value of Object.values(request.query)) expect(value).toMatch(/^[A-Za-z0-9_-]{1,512}={0,2}$/);
       const form = new FormData();
       for (const [name, value] of Object.entries(request.fields)) form.set(name, value);
       form.set('upload[file]', new Blob([zipSync(Object.fromEntries(zipFiles.map(name => [name, strToU8('x')])))], { type: 'application/zip' }), 'aisler_export_main.zip');
-      const query = Object.keys(request.query).sort().map(key => `${key}=${request.query[key]}`).join('&');
+      const query = Object.keys(request.query).sort().map(key => `${key}=${request.query[key]!.replaceAll('=', '%3D')}`).join('&');
       const response = await fetch(`${mock.origin}${request.path}?${query}`, { method: 'POST', body: form });
       return { status: response.status, body: await response.json() };
     },
@@ -305,8 +315,14 @@ describe('against the mock AISLER, through a host that sends like PCBJam', () =>
     const arrived = mock.projects.get(projectId)!.upload!;
     expect(arrived).toMatchObject({ filename: 'aisler_export_main.zip', title: 'main' });
     expect(arrived.files.map(f => f.name).sort()).toEqual([...FILES].sort());
-    // The next push is another project.
-    expect((await session.push()).projectId).not.toBe(projectId);
+    // The next push is another project, and one of the two had a token that ends in padding.
+    const next = await session.push();
+    expect(next.projectId).not.toBe(projectId);
+    expect(mock.projects.get(next.projectId)!.upload).toMatchObject({ filename: 'aisler_export_main.zip' });
+    const tokens = [projectId, next.projectId].map(id => (mock.projects.get(id) as unknown as { token: string }).token);
+    expect(tokens.filter(token => token.endsWith('=')).length).toBe(1);
+    // The mock takes an upload only at the address it signed, so both tokens arrived whole.
+    expect(mock.projects.get(projectId)!.upload).toBeTruthy();
   });
 
   it('shows why AISLER could not read a ZIP', async () => {

@@ -26,6 +26,11 @@ describe('mock AISLER', () => {
     const project = await start();
     expect(project.project_id).toMatch(/^[A-Z]{8}$/);
     expect(project.upload_url).toMatch(/^https:\/\/aisler-mock\.example\/api\/import\?p=[A-Za-z0-9_-]{164}&s=[0-9a-f]{64}$/);
+    // Every second token ends in base64 padding, written %3D, and uploads the same way.
+    const padded = await start();
+    expect(padded.upload_url).toMatch(/^https:\/\/aisler-mock\.example\/api\/import\?p=[A-Za-z0-9_-]{163}%3D&s=[0-9a-f]{64}$/);
+    expect((await fetch(local(padded.upload_url), { method: 'POST', body: form() })).status).toBe(201);
+    expect((await fetch(local(padded.upload_url.replace('%3D', '')), { method: 'POST', body: form() })).status).toBe(403);
     const upload = await fetch(local(project.upload_url), { method: 'POST', body: form() });
     expect(upload.status).toBe(201);
     const { callback, redirect } = (await upload.json()) as { callback: string; redirect: string };
@@ -38,6 +43,18 @@ describe('mock AISLER', () => {
     expect(page).toContain('board-Edge_Cuts.gbr');
     // The signed address worked once.
     expect((await fetch(local(project.upload_url), { method: 'POST', body: form() })).status).toBe(403);
+  });
+
+  it('answers a request without a User-Agent with an empty 400, as AISLER\'s CDN does', async () => {
+    const { request } = await import('node:http');
+    const answer = await new Promise<{ status?: number; body: string; type?: string }>((resolve, reject) => {
+      const req = request(mock.origin + '/p/new.json', { headers: { accept: 'application/json' } }, res => {
+        let body = '';
+        res.on('data', chunk => { body += chunk; }).on('end', () => resolve({ status: res.statusCode, body, type: res.headers['content-type'] }));
+      });
+      req.on('error', reject).end();
+    });
+    expect(answer).toEqual({ status: 400, body: '', type: 'application/json' });
   });
 
   it('refuses an address it did not sign, a missing file, a non-ZIP and a missing title', async () => {

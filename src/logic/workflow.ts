@@ -122,9 +122,11 @@ export function uploadQueryFrom(body: unknown, origin: string): { p: string; s: 
   if (typeof url !== 'string' || !hostOf(origin) || !url.startsWith(origin + IMPORT_PATH + '?')) throw unknown();
   const query: Record<string, string> = {};
   for (const pair of url.slice(origin.length + IMPORT_PATH.length + 1).split('&')) {
-    const match = /^([ps])=([A-Za-z0-9_-]{1,512})$/.exec(pair);
+    // A value is base64 text and about one in three ends in padding, which
+    // AISLER writes as %3D. PCBJam takes it as "=" and writes it back as %3D.
+    const match = /^([ps])=([A-Za-z0-9_-]{1,512})((?:%3[Dd]|=){0,2})$/.exec(pair);
     if (!match || Object.hasOwn(query, match[1]!)) throw unknown();
-    query[match[1]!] = match[2]!;
+    query[match[1]!] = match[2]! + match[3]!.replace(/%3[Dd]/g, '=');
   }
   if (typeof query.p !== 'string' || typeof query.s !== 'string') throw unknown();
   return { p: query.p, s: query.s };

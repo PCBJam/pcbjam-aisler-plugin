@@ -1,6 +1,6 @@
 // A stand-in for the part of AISLER this plugin talks to, for tests and manual
 // runs: every push to the real AISLER makes a real project. It behaves as
-// AISLER answered when probed on 2026-11-20:
+// AISLER answered when probed on 2026-11-20, and on staging on 2026-11-24:
 //
 //   GET  /p/new.json             201 {project_url, project_id, import_url, upload_url, started}
 //                                upload_url = <origin>/api/import?p=<token>&s=<signature>
@@ -8,6 +8,10 @@
 //                                201 {callback, redirect}; a signed address works once
 //   GET  /api/import/<job>       200 {progress, message}: 0..99 working, 100 ready, -1 failed
 //   GET  /p/<ID>                 the project page (here: a list of what arrived)
+//
+// The token is base64 with its padding left on, so about one in three ends in
+// "=", written %3D in the address (here: every second one). A request without
+// a User-Agent gets an empty 400 from AISLER's CDN.
 //
 // The import "reads" the ZIP like AISLER does as far as this plugin can get it
 // wrong: no board outline Gerber is a failed import.
@@ -28,24 +32,26 @@ export async function startAislerMock({ port = 3059, host = "127.0.0.1", publicO
   const sign = (token) => createHmac("sha256", secret).update(token).digest("hex");
   /** project id -> { id, token, upload?: {...} } */
   const projects = new Map();
+  let issued = 0;
   /** job id -> { project, polls, failure? } */
   const jobs = new Map();
   const json = (res, status, body) => res.writeHead(status, { "content-type": "application/json; charset=utf-8" }).end(JSON.stringify(body));
 
   const server = createServer(async (req, res) => {
+    if (!req.headers["user-agent"]) { res.writeHead(400, { "content-type": "application/json" }).end(); return; }
     const origin = publicOrigin ?? `http://${host}:${server.address().port}`;
     const url = new URL(req.url, "http://mock");
     try {
       if (req.method === "GET" && url.pathname === "/p/new.json") {
         const id = Array.from(randomBytes(8), (b) => LETTERS[b % 26]).join("");
-        // 164 characters of [A-Za-z0-9_-], like AISLER's.
-        const token = randomBytes(123).toString("base64url");
+        // 164 characters like AISLER's: [A-Za-z0-9_-], and for every second project one "=" of padding at the end.
+        const token = randomBytes(issued++ % 2 ? 122 : 123).toString("base64").replaceAll("+", "-").replaceAll("/", "_");
         projects.set(id, { id, token });
         return json(res, 201, {
           project_url: `${origin}/p/${id}`,
           project_id: id,
           import_url: `${origin}/p/${id}/import`,
-          upload_url: `${origin}/api/import?p=${token}&s=${sign(token)}`,
+          upload_url: `${origin}/api/import?p=${token.replaceAll("=", "%3D")}&s=${sign(token)}`,
           started: false,
         });
       }
